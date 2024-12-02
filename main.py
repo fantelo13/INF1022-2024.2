@@ -108,13 +108,17 @@ def t_newLine(t):
 
 #Erros:
 def t_error(t):
-  print("Caractere Inválido: '%s'" % t.value[0])
+  print(f"Caractere inválido '{t.value[0]}' na linha {t.lineno}")
   t.lexer.skip(1)
 
 #Adições -------------------------------------------------------------------
 def t_NUMERO(t):
     r'\d+'
     t.value = int(t.value)
+    return t
+
+def t_VARIAVEL(t):
+    r'[a-zA-Z]+'
     return t
   #-------------------------------------------------------------------
 
@@ -129,12 +133,12 @@ parser = yacc.yacc(debug = True)
 
 
 
-def p_programa(p):
-    #'programa : INICIO varlist MONITOR varlist EXECUTE cmds TERMINO'
+def p_programa(p): #ADD
+    #'programa : INICIO varlist MONITOR varlist EXECUTE cmds TERMINO' NOTA:
     'programa : cmds'
     p[0] = ('programa', p[1])
 
-def p_num(p):
+def p_num(p): #ADD
   '''num : NUMBERS
            | ID'''
   p[0] = p[1]
@@ -144,14 +148,14 @@ def p_num(p):
 #Variavel Unica - varlist = ID
 
 
-def p_var(p):
+def p_var(p): #ADD
   'varlist : ID'
   #Só uma var
   p[0] = p[1]
 
 
 #Lista de var separada por virgula
-def p_varlist(p):
+def p_varlist(p): #ADD
   'varlist : ID VIRGULA varlist'
   #varlist = ID, varlist
   p[0] = '%s, %s' % (p[1], p[3])
@@ -177,17 +181,94 @@ def p_cmd(p):
     p[0] = p[1]
 
 def p_atribuicao(p): #NOTAS:Correto?
-    'atribuicao : FACA VAR SER NUM PONTO'
+    '''atribuicao : FACA VAR SER NUM PONTO
+                  | FACA VAR SER VAR PONTO'''
     p[0] = ('atribuicao', p[2], p[4])
 
+def p_impressao(p): #Print para variáveis
+    '''impressao : MOSTRE VAR PONTO
+                 | MOSTRE operacao PONTO'''
+                 #| MOSTRE NUM PONTO??
+    p[0] = ('impressao', p[2])
+
+#Há como juntar todas as somas?
+def p_operacao_soma(p):
+    '''operacao : SOME VAR COM VAR PONTO
+                | SOME VAR COM NUM PONTO
+                | SOME NUM COM VAR PONTO
+                | SOME NUM COM NUM PONTO'''
+    p[0] = ('soma', p[2], p[4])
+
+
+#Considerar para tabela
+# def execute_soma(operando1, operando2):
+#     valor1 = obter_valor(operando1)
+#     valor2 = obter_valor(operando2)
+#     if isinstance(operando1, str):  # Se é uma variável
+#         tabela_variaveis[operando1] = valor1 + valor2
+#     else:
+#         print("Erro: O primeiro operando deve ser uma variável para armazenar o resultado.")
+
+def p_operacao_multiplique(p):
+    '''operacao : MULTIPLIQUE VAR POR VAR PONTO
+                | MULTIPLIQUE VAR POR NUM PONTO
+                | MULTIPLIQUE NUM POR VAR PONTO
+                | MULTIPLIQUE NUM POR NUM PONTO'''
+    operador1 = p[2]
+    operador2 = p[4]
+    p[0] = ('multiplicacao', operador1, operador2) #Perguntar
+    #p[0] = ('multiplicacao', p[2], p[4]) #Opção 1 ou Opção 2?
+
+def p_repeticao(p): #Checar se esta correto
+    'repeticao : REPITA NUM VEZES DOISPONTOS cmds FIM'
+    #cmds_indentado = "\n\t".join(p[5].split("\n"))  NOTA: ALTERAR
+    #p[0] = f"for i in range({p[2]}):\n\t" + cmds_indentado NOTA: ALTERAR
+    numero_vezes = p[2]
+    comandos = p[5]
+    #codigo_comandos = '\n'.join(comandos)
+    p[0] = ('repeticao', numero_vezes, comandos)
+
+def p_condicional_se(p):
+    '''condicional : SE condicao ENTAO cmds FIM
+                   | SE NUM ENTAO cmds FIM
+                   | SE VAR ENTAO cmds FIM
+                   | SE NUM ENTAO cmds SENAO cmds FIM
+                   | SE VAR ENTAO cmds SENAO cmds FIM'''
+    if isinstance(p[2], str):
+       checaTipo = p[2]
+    else:
+       checaTipo == (p[2 != 0]) #Se for igual a zero, recebe false. Se for diferente de zero, recebe True.
+    # if len(p) == 6: # Caso sem SENAO
+    #     p[0] = ('condicional_se', p[2], p[4])
+    # else:
+    #     # Caso com SENAO
+    #     p[0] = ('condicional_se_senao', p[2], p[4], p[6])
+
+    p[0] = ('condicional_se', p[2], p[4])
+
+#ALTENATIVAMENTE
+# def p_condicional_se(p):
+#     'condicional : SE condicao ENTAO cmd FIM'
+#     p[0] = ('condicional_se', p[2], p[4])
+
+# def p_condicional_se_senao(p):
+#     'condicional : SE condicao ENTAO cmd SENAO cmd FIM'
+#     p[0] = ('condicional_se_senao', p[2], p[4], p[6])
+
+# def p_error(p):
+#     if p:
+#         print(f"Erro de sintaxe próximo ao token '{p.value}' na linha {p.lineno}")
+#     else:
+#         print("Erro de sintaxe no final da entrada")
+
 #Comando - contas - ID = ID
-def p_iguala_var(p):
+def p_iguala_var(p): #ADD
   'cmd : ID SPECIALS num'
   if p[2] == '=':
       p[0] = '%s = %s\n' % (p[1], p[3])
 
 
-def p_contas(p):
+def p_contas(p): #ADD
   'num : num SPECIALS num'
   if p[2] == "+":
     p[0] = '%s + %s' % (p[1], p[3])
@@ -196,33 +277,33 @@ def p_contas(p):
 
 
 #Comando de While - Enquanto id != 0 processa lista de cmds
-def p_cmd_enquanto(p):
+def p_cmd_enquanto(p): #ADD
   'cmd : ENQUANTO ID FACA cmds FIM'
   p[0] = 'while %s:\n%s\n%s = %s -1\n' % (p[2], p[4], p[2], p[2])
 
 
 #Comando If sem else
-def p_cmd_if(p):
+def p_cmd_if(p): #ADD
   'cmd : IF ID THEN cmds'
   p[0] = 'if %s:\n%s\n' % (p[2], p[4])
 
 
 #Comando If com else
-def p_cmd_if_else(p):
+def p_cmd_if_else(p): #ADD
   'cmd : IF ID THEN cmds ELSE cmds'
   p[0] = 'if %s:\n%s\nelse:\n%s\n' % (p[2], p[4], p[6])
 
 
-def p_cmd_zero(p):
+def p_cmd_zero(p): #ADD
   'cmd : ZERO PAR_O ID PAR_C'
   p[0] = '%s = 0\n' % p[3]
 
 
-def p_eval(p):
+def p_eval(p): #ADD
   'cmd : EVAL PAR_O num VIRGULA num VIRGULA cmds PAR_C'
   p[0] = 'while %s != %s:\n%s\n%s = %s - 1\n' % (p[3], p[5], p[7], p[5], p[5])
 
-def p_id_eval(p):
+def p_id_eval(p): #ADD
   'cmd : ID SPECIALS EVAL PAR_O num VIRGULA num VIRGULA cmds PAR_C'
   if p[2] == '=':
     p[0] = 'while %s != %s:\n%s%s = %s - 1\n' % (p[5], p[7], p[9], p[7], p[7])
@@ -235,20 +316,9 @@ def p_error(p):
 
 parser = yacc(debug=True)
 
-data = '''
-INICIO X, Y, L
-MONITOR Z
-EXECUTE
-ZERO(Z)
-X = 5
-Y = 0
-L = 1
-IF Y THEN
-Z = EVAL(X, L, Z=Z*L)
-ELSE
-Z = EVAL(X, L, Z=Z*X)
-TERMINO
-'''
+nomeArq="NomeDoArquivo.txt"
+with open(nomeArq, "r") as file:
+        data = file.read() #Armazena a data do arquivo que sera "traduzido"
 
 
 lexer.input(data)
@@ -256,6 +326,9 @@ for tok in lexer:
   print(tok)
 
 result = parser.parse(data)
+#if result == True:
+  #print("Código gerado com sucesso para {nomeArq}"")
+  #export_to_obj(result,nomeArq)
 #print(result)
 
 
@@ -341,19 +414,18 @@ def add_print(code, monitor):
 
 #Normalizando a lista de variaveis
 #Separando cada var em um elemento da lista
-monitor = monitor[0].split(',')
+#monitor = monitor[0].split(',')
 #Strip - Tira espaços em branco
-monitor = [var.strip() for var in monitor]
-
+#monitor = [var.strip() for var in monitor]
 
 result = add_print(result, monitor)
 print(result)
 
-#Exportando o codigo em OBJ
+#Seção para exportar o meu código teste
 
 def export_to_obj(code, file_name):
   with open(file_name, 'w') as file:
     file.write(code)
   print("Compilado com sucesso!")
 
-export_to_obj(result, 'Exemplo3.py')
+export_to_obj(result, 'Exemplo.py')

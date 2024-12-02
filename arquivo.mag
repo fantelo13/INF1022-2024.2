@@ -1,0 +1,42 @@
+FACA x SER 10.
+MOSTRE x.
+
+FACA a SER 3.
+FACA b SER 7.
+SOME a COM b.
+MOSTRE a.
+
+FACA total SER 0.
+REPITA 5 VEZES :
+SOME total COM 2.
+FIM
+MOSTRE total .
+
+FACA total SER 0.
+REPITA 5 VEZES :
+SOME total COM 2.
+FIM
+MOSTRE total .
+
+FACA n SER 4.
+SE n ENTAO
+MOSTRE n.
+FIM
+
+FACA num SER 0.
+SE num ENTAO
+MOSTRE num .
+SENAO
+MOSTRE 10.
+FIM
+
+FACA x SER 3.
+FACA y SER 5.
+MULTIPLIQUE x POR y.
+MOSTRE x.
+
+FACA resultado SER 1.
+REPITA 3 VEZES :
+MULTIPLIQUE resultado POR 2.
+FIM
+MOSTRE resultado .
