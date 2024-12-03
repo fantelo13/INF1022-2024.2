@@ -1,16 +1,10 @@
 #Aluno: Felipe Antelo Machado de Oliveira
 #Matrícula: 2210872
-#Professor: Herrman
+#Professor: Edward Hermann Haeusler
+#Monitor: Eduardo Dantas Luna
 
-
-#programa - INICIO varlist MONITOR varlist EXECUTE cmds TERMINO
-#varlist - id varlist | id
-#cmds - cmd cmds | cmd
-#cmd - id = id
-
-#varlist -> lista de variaveis separadas por virgula
-#INICIO -> Inicio do programa
-#MONITOR -> sinaliza o inicio da varlist
+#INICIO -> Incluir variáveis diversas
+#armazena -> sinaliza o inicio da varlist
 #Essas variaveis devem ser impressas
 #EXECUTE -> Após ele vem uma sequencia de comandos
 #TERMINO -> Termino do programa
@@ -18,9 +12,6 @@
 #enquanto id !=0 FACA cmds FIM
 
 #Devemos complementar a linguagem com os comandos:
-#IF-THEN e IF-THEN-ELSE
-#Eval(num1,num2,cmds): recebe lista de cmds, 2 numeros, executa os
-#comandos até que val1 = val2. cada cmd val1 = val1-1
 
 #AQUI!!!!!!!!!!!!!
 #programa → cmds
@@ -46,14 +37,14 @@
 #cmds → cmd cmds'
 #cmds' → cmd cmds' | ε
 
-from typing import DefaultDict
-from ply.lex import lex
-from ply.yacc import yacc
+from ply.lex import lex #necessário??
+from ply.yacc import yacc #necessário??
 
-global monitor
-monitor = []
+global armazena
+armazena = []
 
 #Definindo os Tokens:
+#def t_token(t):
 tokens = (
     'FACA', #Inicio de uma atribuição
     'SER',  #Utilizado na atribuição para definir o valor da variável
@@ -79,7 +70,6 @@ tokens = (
 )
 
 #Expressões regulares para os Tokens Simples
-# t_ID = r'(?!IGUAL|INICIO|MONITOR|EXECUTE|TERMINO|ENQUANTO|FIM|FACA|IF|THEN|ELSE|VIRGULA|NUMBERS|SPECIALS|PAR_O|PAR_C|ZERO|EVAL)[a-zA-Z_][a-zA-Z0-9_]*'
 # t_INICIO = r'INICIO' NOTA: Necessário??
 t_FACA = r'FACA'
 t_SER = r'SER'
@@ -124,7 +114,7 @@ def t_VARIAVEL(t):
 
 
 #  Construindo o analisador lexico
-lexer = lex.lex()
+lexer = lex.lex(debug=True)
 
 #  Construindo o parser
 parser = yacc.yacc(debug = True)
@@ -133,8 +123,8 @@ parser = yacc.yacc(debug = True)
 
 
 
-def p_programa(p): #ADD
-    #'programa : INICIO varlist MONITOR varlist EXECUTE cmds TERMINO' NOTA:
+def p_programa(p): #ADD #NECESSÁRIO???
+    #'programa : cmds NOTA:
     'programa : cmds'
     p[0] = ('programa', p[1])
 
@@ -155,10 +145,6 @@ def p_var(p): #ADD
 
 
 #Lista de var separada por virgula
-def p_varlist(p): #ADD
-  'varlist : ID VIRGULA varlist'
-  #varlist = ID, varlist
-  p[0] = '%s, %s' % (p[1], p[3])
 
 
 #Sequencia de comandos - cmds : cmd cmds
@@ -166,9 +152,9 @@ def p_cmds(p):
     '''cmds : cmd cmds
             | cmd'''
     if len(p) == 3:
-        p[0] = [p[1]] + p[2]  # Lista de comandos
+        p[0] = p[1] + p[2]  # Lista de comandos
     else:
-        p[0] = [p[1]]
+        p[0] = p[1]
 
 
 #Comando Unico - cmd : cmd2
@@ -183,13 +169,15 @@ def p_cmd(p):
 def p_atribuicao(p): #NOTAS:Correto?
     '''atribuicao : FACA VAR SER NUM PONTO
                   | FACA VAR SER VAR PONTO'''
-    p[0] = ('atribuicao', p[2], p[4])
+    x1= p[2]
+    x2= p[4]
+    p[0] = f'{x1}={x2};'
 
 def p_impressao(p): #Print para variáveis
     '''impressao : MOSTRE VAR PONTO
-                 | MOSTRE operacao PONTO'''
-                 #| MOSTRE NUM PONTO??
-    p[0] = ('impressao', p[2])
+                 | MOSTRE NUM PONTO'''
+    imprimido = p[2]
+    p[0] = f'printf ({imprimido});'
 
 #Há como juntar todas as somas?
 def p_operacao_soma(p):
@@ -197,8 +185,10 @@ def p_operacao_soma(p):
                 | SOME VAR COM NUM PONTO
                 | SOME NUM COM VAR PONTO
                 | SOME NUM COM NUM PONTO'''
-    p[0] = ('soma', p[2], p[4])
-
+    operador1 = p[2]
+    operador2 = p[4]
+    p[0] = f'{operador1} = {operador1} + {operador2};'
+    #p[0] = ('soma', p[2], p[4])
 
 #Considerar para tabela
 # def execute_soma(operando1, operando2):
@@ -216,17 +206,22 @@ def p_operacao_multiplique(p):
                 | MULTIPLIQUE NUM POR NUM PONTO'''
     operador1 = p[2]
     operador2 = p[4]
-    p[0] = ('multiplicacao', operador1, operador2) #Perguntar
+    p[0] = f'{operador1} = {operador1} * {operador2};'
+    #p[0] = ('multiplicacao', operador1, operador2) #Perguntar
     #p[0] = ('multiplicacao', p[2], p[4]) #Opção 1 ou Opção 2?
 
+contador = 0
 def p_repeticao(p): #Checar se esta correto
-    'repeticao : REPITA NUM VEZES DOISPONTOS cmds FIM'
+    '''repeticao : REPITA NUM VEZES DOISPONTOS cmds FIM
+                 | REPITA VAR VEZES DOISPONTOS cmds FIM'''
     #cmds_indentado = "\n\t".join(p[5].split("\n"))  NOTA: ALTERAR
     #p[0] = f"for i in range({p[2]}):\n\t" + cmds_indentado NOTA: ALTERAR
     numero_vezes = p[2]
     comandos = p[5]
+    p[0] = f'for(int i_{contador}=0;i_{contador}<{numero_vezes};i_{contador}++)' + '{' + f'{comandos}' + '}'
+    contador+=1
     #codigo_comandos = '\n'.join(comandos)
-    p[0] = ('repeticao', numero_vezes, comandos)
+    #p[0] = ('repeticao', numero_vezes, comandos)
 
 def p_condicional_se(p):
     '''condicional : SE condicao ENTAO cmds FIM
@@ -261,58 +256,10 @@ def p_condicional_se(p):
 #     else:
 #         print("Erro de sintaxe no final da entrada")
 
-#Comando - contas - ID = ID
-def p_iguala_var(p): #ADD
-  'cmd : ID SPECIALS num'
-  if p[2] == '=':
-      p[0] = '%s = %s\n' % (p[1], p[3])
-
-
-def p_contas(p): #ADD
-  'num : num SPECIALS num'
-  if p[2] == "+":
-    p[0] = '%s + %s' % (p[1], p[3])
-  elif p[2] == "*":
-    p[0] = '%s * %s' % (p[1], p[3])
-
-
-#Comando de While - Enquanto id != 0 processa lista de cmds
-def p_cmd_enquanto(p): #ADD
-  'cmd : ENQUANTO ID FACA cmds FIM'
-  p[0] = 'while %s:\n%s\n%s = %s -1\n' % (p[2], p[4], p[2], p[2])
-
-
-#Comando If sem else
-def p_cmd_if(p): #ADD
-  'cmd : IF ID THEN cmds'
-  p[0] = 'if %s:\n%s\n' % (p[2], p[4])
-
-
-#Comando If com else
-def p_cmd_if_else(p): #ADD
-  'cmd : IF ID THEN cmds ELSE cmds'
-  p[0] = 'if %s:\n%s\nelse:\n%s\n' % (p[2], p[4], p[6])
-
-
-def p_cmd_zero(p): #ADD
-  'cmd : ZERO PAR_O ID PAR_C'
-  p[0] = '%s = 0\n' % p[3]
-
-
-def p_eval(p): #ADD
-  'cmd : EVAL PAR_O num VIRGULA num VIRGULA cmds PAR_C'
-  p[0] = 'while %s != %s:\n%s\n%s = %s - 1\n' % (p[3], p[5], p[7], p[5], p[5])
-
-def p_id_eval(p): #ADD
-  'cmd : ID SPECIALS EVAL PAR_O num VIRGULA num VIRGULA cmds PAR_C'
-  if p[2] == '=':
-    p[0] = 'while %s != %s:\n%s%s = %s - 1\n' % (p[5], p[7], p[9], p[7], p[7])
-
 
 #Erro de sintaxe
 def p_error(p):
-  print("Erro de Sintaxe\n", p.value)
-
+  print("Erro de sintaxe"+ str(p))
 
 parser = yacc(debug=True)
 
@@ -334,59 +281,59 @@ result = parser.parse(data)
 
 
 
-def indent_python_code(code):
-  # Divide as linhas em colunas, cada item é uma linha
-  lines = code.strip().split('\n')
-  # Manter a indentação da última linha
-  indented_code = []
-  indent_level = 0
-  # Nível de indentação do último if
-  #Evitar o problema com o else
-  last_if_indent_level = 0
-  # Ajeita a indentação de acordo com a quantidade de \n - Maneira de arruma a identação
-  previous_line_empty = False
+# def indent_python_code(code):
+#   # Divide as linhas em colunas, cada item é uma linha
+#   lines = code.strip().split('\n')
+#   # Manter a indentação da última linha
+#   indented_code = []
+#   indent_level = 0
+#   # Nível de indentação do último if
+#   #Evitar o problema com o else
+#   last_if_indent_level = 0
+#   # Ajeita a indentação de acordo com a quantidade de \n - Maneira de arruma a identação
+#   previous_line_empty = False
 
-  for line in lines:
-      stripped_line = line.strip()
+#   for line in lines:
+#       stripped_line = line.strip()
 
-      # Caso tenha \n\n volta 1 nível
-      if not stripped_line:
-          if previous_line_empty:
-              indent_level -= 1
-          previous_line_empty = True
-          continue
-      else:
-          previous_line_empty = False
+#       # Caso tenha \n\n volta 1 nível
+#       if not stripped_line:
+#           if previous_line_empty:
+#               indent_level -= 1
+#           previous_line_empty = True
+#           continue
+#       else:
+#           previous_line_empty = False
 
-      # Se a linha atual contém 'return', ajusta a indentação para 1
-      if 'return' in stripped_line:
-          # Teremos apenas um retorno por função e ele sempre ficará na indentação correta
-          indented_code.append('    ' * 1 + stripped_line)
-          continue
+#       # Se a linha atual contém 'return', ajusta a indentação para 1
+#       if 'return' in stripped_line:
+#           # Teremos apenas um retorno por função e ele sempre ficará na indentação correta
+#           indented_code.append('    ' * 1 + stripped_line)
+#           continue
 
-      # Verifica se a linha atual é 'else:', 'elif:', 'except:', ou 'finally:'
-      # Esses precisam estar no mesmo nível que o bloco anterior
-      if stripped_line.split()[0] in ['else:', 'elif:', 'except:', 'finally:']:
-          indent_level = last_if_indent_level
+#       # Verifica se a linha atual é 'else:', 'elif:', 'except:', ou 'finally:'
+#       # Esses precisam estar no mesmo nível que o bloco anterior
+#       if stripped_line.split()[0] in ['else:', 'elif:', 'except:', 'finally:']:
+#           indent_level = last_if_indent_level
 
-      # Adiciona a linha com a indentação correta
-      indented_code.append('    ' * indent_level + stripped_line)
+#       # Adiciona a linha com a indentação correta
+#       indented_code.append('    ' * indent_level + stripped_line)
 
-      # Verifica se a linha atual termina com ':'
-      # Toda vez que temos um : precisamos incrementar a indentação
-      if stripped_line[-1] == ':':
-          # Se a linha atual é 'if', salva o nível de indentação
-          if stripped_line.startswith('if'):
-              last_if_indent_level = indent_level
-          indent_level += 1
+#       # Verifica se a linha atual termina com ':'
+#       # Toda vez que temos um : precisamos incrementar a indentação
+#       if stripped_line[-1] == ':':
+#           # Se a linha atual é 'if', salva o nível de indentação
+#           if stripped_line.startswith('if'):
+#               last_if_indent_level = indent_level
+#           indent_level += 1
 
-  # Junta as linhas novamente
-  return '\n'.join(indented_code)
+#   # Junta as linhas novamente
+#   return '\n'.join(indented_code)
 
-result = indent_python_code(result)
+# result = indent_python_code(result)
 
 
-def add_print(code, monitor):
+def add_print(code, armazena):
   # Dividir o código em linhas
   lines = code.split('\n')
 
@@ -397,7 +344,7 @@ def add_print(code, monitor):
   for line in lines:
       new_lines.append(line)
       stripped_line = line.strip()
-      for var in monitor:
+      for var in armazena:
           #Vejo se possuo Z = ...
           if stripped_line.startswith(var + " ="):
               # Determinar a indentação da linha
@@ -414,11 +361,9 @@ def add_print(code, monitor):
 
 #Normalizando a lista de variaveis
 #Separando cada var em um elemento da lista
-#monitor = monitor[0].split(',')
+#data=data.split(',')
 #Strip - Tira espaços em branco
-#monitor = [var.strip() for var in monitor]
 
-result = add_print(result, monitor)
 print(result)
 
 #Seção para exportar o meu código teste
