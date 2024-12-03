@@ -16,3 +16,6 @@ REPITA num VEZES : cmds FIM
 Condicionais
 SE condicao ENTAO cmd FIM
 SE condicao ENTAO cmd SENAO cmd FIM
+
+
+Adicionar includes
