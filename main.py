@@ -1,164 +1,84 @@
-#Aluno: Felipe Antelo Machado de Oliveira
-#Matrícula: 2210872
-#Professor: Edward Hermann Haeusler
-#Monitor: Eduardo Dantas Luna
+# Aluno: Felipe Antelo Machado de Oliveira
+# Matrícula: 2210872
+# Professor: Edward Hermann Haeusler
+# Monitor: Eduardo Dantas Luna
 
-#INICIO -> Incluir variáveis diversas
-#armazena -> sinaliza o inicio da varlist
-#Essas variaveis devem ser impressas
-#EXECUTE -> Após ele vem uma sequencia de comandos
-#TERMINO -> Termino do programa
-#cmd -> ENQUANTO id FACA cmds FIM (loop)
-#enquanto id !=0 FACA cmds FIM
+import ply.lex as lex
+import ply.yacc as yacc
 
-#Devemos complementar a linguagem com os comandos:
+# Dicionário de palavras reservadas
+reserved = {
+    'FACA': 'FACA',
+    'SER': 'SER',
+    'MOSTRE': 'MOSTRE',
+    'SOME': 'SOME',
+    'COM': 'COM',
+    'MULTIPLIQUE': 'MULTIPLIQUE',
+    'POR': 'POR',
+    'REPITA': 'REPITA',
+    'VEZES': 'VEZES',
+    'FIM': 'FIM',
+    'SE': 'SE',
+    'ENTAO': 'ENTAO',
+    'SENAO': 'SENAO',
+}
 
-#AQUI!!!!!!!!!!!!!
-#programa → cmds
-# cmds → cmd cmds | cmd
-# cmd → atribuicao | impressao | operacao | repeticao
-# atribuicao → FACA var SER num.
-# impressao → MOSTRE var. | MOSTRE operacao.
-# operacao → SOME var COM var. | SOME var COM num. | SOME num COM num.
-# repeticao → REPITA num VEZES : cmds FIM
-
-#Condicional
-# cmd → condicional
-# condicional → SE condicao ENTAO cmd FIM
-#             | SE condicao ENTAO cmd SENAO cmd FIM
-# condicao → num | var
-
-#Multiplicacao
-# operacao → MULTIPLIQUE var POR var.
-#          | MULTIPLIQUE var POR num.
-#          | MULTIPLIQUE num POR num.
-
-#Recursão a esquerda?
-#cmds → cmd cmds'
-#cmds' → cmd cmds' | ε
-
-from ply.lex import lex #necessário??
-from ply.yacc import yacc #necessário??
-
-global armazena
-armazena = []
-
-#Definindo os Tokens:
-#def t_token(t):
-tokens = (
-    'FACA', #Inicio de uma atribuição
-    'SER',  #Utilizado na atribuição para definir o valor da variável
-    'MOSTRE', #Imprimir variável ou resultado de operação
-    'SOME', #Inicio de uma operação de soma
-    'COM',  #Especifica o segundo operador de SOMA
-    'MULTIPLIQUE', #Inicio de uma operação de multiplicação
-    'REPITA', #Inicio de Laço de Loop
-    'VEZES', #Especifica o segundo operador de MULTIPLIQUE
-    'DOISPONTOS',  #Especifica o bloco de laço de loop
-    'FIM', #Fim de um bloco de repetição ou condição
-    'SE',  #Inicia condicional
-    'ENTAO', #Utilizado na estrutura condicional após a condição
-    'SENAO',
-    'PONTO',
+# Lista de tokens
+tokens = [
     'VAR',
-    'NUM', #Utilizado na estrutura condicional para definir o bloco alternativo
-    #'var',  #identificador de variável formados por letras
-    #'num',   #identificador de variável formados por numeros
-    #'SPECIALS',
-    #'PAR_O',
-    #'PAR_C',
-)
+    'NUM',
+    'DOISPONTOS',
+    'PONTO',
+] + list(reserved.values())
 
-#Expressões regulares para os Tokens Simples
-# t_INICIO = r'INICIO' NOTA: Necessário??
-t_FACA = r'FACA'
-t_SER = r'SER'
-t_MOSTRE = r'MOSTRE'
-t_SOME = r'SOME'
-t_COM = r'COM'
-t_MULTIPLIQUE = r'MULTIPLIQUE'
-t_POR = r'POR'
-t_REPITA = r'REPITA'
-t_VEZES = r'VEZES'
-t_DOISPONTOS = r':'
-t_FIM = r'FIM'
-t_SE = r'SE'
-t_ENTAO = r'ENTAO'
-t_SENAO = r'SENAO'
+# Expressões regulares para tokens simples
 t_PONTO = r'\.'
-#t_VAR = r'[a-zA-Z]+' NOTA: Necessário??
-#t_NUM = r'\d+'  NOTA: Necessário??
-t_ignore = ' \t' #Espaço em branco
+t_DOISPONTOS = r':'
+t_ignore = ' \t'
 
-
-def t_newLine(t):
-  r'\n+'
-  t.lexer.lineno += len(t.value)
-
-
-#Erros:
-def t_error(t):
-  print(f"Caractere inválido '{t.value[0]}' na linha {t.lineno}")
-  t.lexer.skip(1)
-
-#Adições -------------------------------------------------------------------
-def t_NUMERO(t):
+# Função para identificar números
+def t_NUM(t):
     r'\d+'
     t.value = int(t.value)
     return t
 
-def t_VARIAVEL(t):
+# Função para identificar variáveis e palavras reservadas
+def t_VAR(t):
     r'[a-zA-Z]+'
+    t.type = reserved.get(t.value, 'VAR')
     return t
-  #-------------------------------------------------------------------
 
+# Função para contar linhas
+def t_newline(t):
+    r'\n+'
+    t.lexer.lineno += len(t.value)
 
-#  Construindo o analisador lexico
-lexer = lex.lex(debug=True)
+# Função para tratar erros
+def t_error(t):
+    print(f"Caractere inválido '{t.value[0]}' na linha {t.lineno}")
+    t.lexer.skip(1)
 
-#  Construindo o parser
-parser = yacc.yacc(debug = True)
+# Construindo o analisador léxico
+lexer = lex.lex()
 
-#Definindo as regras de expressão
+# Variáveis globais
+variables = set()
+contador = 0
 
-
-
-def p_programa(p): #ADD #NECESSÁRIO???
-    #'programa : cmds NOTA:
+# Construindo o parser
+def p_programa(p):
     'programa : cmds'
-    p[0] = ('programa', p[1])
+    p[0] = p[1]
 
-def p_num(p): #ADD
-  '''num : NUMBERS
-           | ID'''
-  p[0] = p[1]
-
-
-#Varlist - define a lista de variaveis que serão utilizadas no programa
-#Variavel Unica - varlist = ID
-
-
-def p_var(p): #ADD
-  'varlist : ID'
-  #Só uma var
-  p[0] = p[1]
-
-
-#Lista de var separada por virgula
-
-
-#Sequencia de comandos - cmds : cmd cmds
 def p_cmds(p):
     '''cmds : cmd cmds
             | cmd'''
     if len(p) == 3:
-        p[0] = p[1] + p[2]  # Lista de comandos
+        p[0] = [p[1]] + p[2]  # Lista de comandos
     else:
-        p[0] = p[1]
+        p[0] = [p[1]]
 
-
-#Comando Unico - cmd : cmd2
-def p_cmd(p):
+def p_cmd(p): 
     '''cmd : atribuicao
            | impressao
            | operacao
@@ -166,211 +86,140 @@ def p_cmd(p):
            | condicional'''
     p[0] = p[1]
 
-def p_atribuicao(p): #NOTAS:Correto?
+def p_atribuicao(p): #Função de atribuição de uma valor a variável
     '''atribuicao : FACA VAR SER NUM PONTO
                   | FACA VAR SER VAR PONTO'''
-    x1= p[2]
-    x2= p[4]
-    p[0] = f'{x1}={x2};'
+    var = p[2]
+    value = p[4]
+    variables.add(var)
+    if isinstance(value, int):
+        code = f'{var} = {value};'
+    else:
+        variables.add(value)
+        code = f'{var} = {value};'
+    p[0] = code
 
-def p_impressao(p): #Print para variáveis
+def p_impressao(p): #Função de print geral
     '''impressao : MOSTRE VAR PONTO
                  | MOSTRE NUM PONTO'''
-    imprimido = p[2]
-    p[0] = f'printf ({imprimido});'
+    value = p[2]
+    if isinstance(value, int):
+        code = f'printf("%d\\n", {value});'
+    else:
+        variables.add(value)
+        code = f'printf("%d\\n", {value});'
+    p[0] = code
 
-#Há como juntar todas as somas?
-def p_operacao_soma(p):
-    '''operacao : SOME VAR COM VAR PONTO
-                | SOME VAR COM NUM PONTO
-                | SOME NUM COM VAR PONTO
-                | SOME NUM COM NUM PONTO'''
-    operador1 = p[2]
-    operador2 = p[4]
-    p[0] = f'{operador1} = {operador1} + {operador2};'
-    #p[0] = ('soma', p[2], p[4])
+def p_operacao(p): #Reconhecimento de Operação (SOME ou MULTIPLIQUE)
+    '''operacao : operacao_soma
+                | operacao_multiplique'''
+    p[0] = p[1]
 
-#Considerar para tabela
-# def execute_soma(operando1, operando2):
-#     valor1 = obter_valor(operando1)
-#     valor2 = obter_valor(operando2)
-#     if isinstance(operando1, str):  # Se é uma variável
-#         tabela_variaveis[operando1] = valor1 + valor2
-#     else:
-#         print("Erro: O primeiro operando deve ser uma variável para armazenar o resultado.")
+def p_operacao_soma(p): #Operação de SOME X COM Y ponto
+    '''operacao_soma : SOME VAR COM VAR PONTO
+                     | SOME VAR COM NUM PONTO
+                     | SOME NUM COM VAR PONTO
+                     | SOME NUM COM NUM PONTO'''
+    op1 = p[2]
+    op2 = p[4]
+    if isinstance(op1, int):
+        print("Erro: Não é possível atribuir a um número.")
+        p[0] = ''
+    else:
+        variables.add(op1)
+        if isinstance(op2, str):
+            variables.add(op2)
+        code = f'{op1} = {op1} + {op2};'
+        p[0] = code
 
-def p_operacao_multiplique(p):
-    '''operacao : MULTIPLIQUE VAR POR VAR PONTO
-                | MULTIPLIQUE VAR POR NUM PONTO
-                | MULTIPLIQUE NUM POR VAR PONTO
-                | MULTIPLIQUE NUM POR NUM PONTO'''
-    operador1 = p[2]
-    operador2 = p[4]
-    p[0] = f'{operador1} = {operador1} * {operador2};'
-    #p[0] = ('multiplicacao', operador1, operador2) #Perguntar
-    #p[0] = ('multiplicacao', p[2], p[4]) #Opção 1 ou Opção 2?
+def p_operacao_multiplique(p): #Operação de MULTIPLIQUE X POR Y ponto
+    '''operacao_multiplique : MULTIPLIQUE VAR POR VAR PONTO
+                            | MULTIPLIQUE VAR POR NUM PONTO
+                            | MULTIPLIQUE NUM POR VAR PONTO
+                            | MULTIPLIQUE NUM POR NUM PONTO'''
+    op1 = p[2]
+    op2 = p[4]
+    if isinstance(op1, int):
+        print("Erro: Não é possível atribuir a um número.")
+        p[0] = ''
+    else:
+        variables.add(op1)
+        if isinstance(op2, str):
+            variables.add(op2)
+        code = f'{op1} = {op1} * {op2};'
+        p[0] = code
 
-contador = 0
-def p_repeticao(p): #Checar se esta correto
+def p_repeticao(p): #Operação de Laço Loop
     '''repeticao : REPITA NUM VEZES DOISPONTOS cmds FIM
                  | REPITA VAR VEZES DOISPONTOS cmds FIM'''
-    #cmds_indentado = "\n\t".join(p[5].split("\n"))  NOTA: ALTERAR
-    #p[0] = f"for i in range({p[2]}):\n\t" + cmds_indentado NOTA: ALTERAR
-    numero_vezes = p[2]
-    comandos = p[5]
-    p[0] = f'for(int i_{contador}=0;i_{contador}<{numero_vezes};i_{contador}++)' + '{' + f'{comandos}' + '}'
-    contador+=1
-    #codigo_comandos = '\n'.join(comandos)
-    #p[0] = ('repeticao', numero_vezes, comandos)
+    global contador
+    contador += 1
+    loop_var = f'i_{contador}'
+    num_vezes = p[2]
+    comandos = '\n'.join(p[5])
+    if isinstance(num_vezes, str):
+        variables.add(num_vezes)
+    code = f'for(int {loop_var} = 0; {loop_var} < {num_vezes}; {loop_var}++) {{\n{comandos}\n}}'
+    p[0] = code
 
-def p_condicional_se(p):
+def p_condicional(p): #Operação Condicional If-Then / If-Then-Else
     '''condicional : SE condicao ENTAO cmds FIM
-                   | SE NUM ENTAO cmds FIM
-                   | SE VAR ENTAO cmds FIM
-                   | SE NUM ENTAO cmds SENAO cmds FIM
-                   | SE VAR ENTAO cmds SENAO cmds FIM'''
-    if isinstance(p[2], str):
-       checaTipo = p[2]
+                   | SE condicao ENTAO cmds SENAO cmds FIM'''
+    cond = p[2]
+    if isinstance(cond, str):
+        variables.add(cond)
+    if len(p) == 6:
+        # SE condicao ENTAO cmds FIM
+        comandos_then = '\n'.join(p[4])
+        code = f'if({cond}) {{\n{comandos_then}\n}}'
     else:
-       checaTipo == (p[2 != 0]) #Se for igual a zero, recebe false. Se for diferente de zero, recebe True.
-    # if len(p) == 6: # Caso sem SENAO
-    #     p[0] = ('condicional_se', p[2], p[4])
-    # else:
-    #     # Caso com SENAO
-    #     p[0] = ('condicional_se_senao', p[2], p[4], p[6])
+        # SE condicao ENTAO cmds SENAO cmds FIM
+        comandos_then = '\n'.join(p[4])
+        comandos_else = '\n'.join(p[6])
+        code = f'if({cond}) {{\n{comandos_then}\n}} else {{\n{comandos_else}\n}}'
+    p[0] = code
 
-    p[0] = ('condicional_se', p[2], p[4])
+def p_condicao(p):
+    '''condicao : NUM
+                | VAR'''
+    p[0] = p[1]
 
-#ALTENATIVAMENTE
-# def p_condicional_se(p):
-#     'condicional : SE condicao ENTAO cmd FIM'
-#     p[0] = ('condicional_se', p[2], p[4])
+def p_error(p): #Mensagem de Erro
+    if p:
+        print(f"Erro de sintaxe próximo ao token '{p.value}' na linha {p.lineno}")
+    else:
+        print("Erro de sintaxe no final da entrada")
 
-# def p_condicional_se_senao(p):
-#     'condicional : SE condicao ENTAO cmd SENAO cmd FIM'
-#     p[0] = ('condicional_se_senao', p[2], p[4], p[6])
+parser = yacc.yacc()
 
-# def p_error(p):
-#     if p:
-#         print(f"Erro de sintaxe próximo ao token '{p.value}' na linha {p.lineno}")
-#     else:
-#         print("Erro de sintaxe no final da entrada")
+def main():
+    nomeArq = "teste1.mag"
+    try:
+        with open(nomeArq, "r") as file:
+            data = file.read()
+            if not data.strip(): #Leitura de arquivo que não pode ser strip indica que ele esta vazio
+                print(f"Erro: O arquivo '{nomeArq}' está vazio.")
+                return
+    except FileNotFoundError: #Arquivo Inexistente
+        print(f"Erro: O arquivo '{nomeArq}' não existe.")
+        return
 
+    result = parser.parse(data) #Armaze a data pós-parse em uma variável de result
+    generated_code = '\n'.join(result) #join com '\n's para um código gerado
 
-#Erro de sintaxe
-def p_error(p):
-  print("Erro de sintaxe"+ str(p))
+    # Declarar variáveis
+    variable_declarations = ''
+    if variables:
+        variable_declarations = 'int ' + ', '.join(variables) + ';\n'
 
-parser = yacc(debug=True)
+    # Código completo em C
+    full_code = '#include <stdio.h>\n\nint main() {\n' + variable_declarations + generated_code + '\nreturn 0;\n}'
 
-nomeArq="NomeDoArquivo.txt"
-with open(nomeArq, "r") as file:
-        data = file.read() #Armazena a data do arquivo que sera "traduzido"
+    # Escrever para um arquivo .c
+    with open('output1.c', 'w') as f: #Abrir o arquivo output que o aluno/Herrman seleciona
+        f.write(full_code) #Escreve código completo
 
+    print("Compilado com sucesso! Código gerado em output.c") #Compilou enfim. Alegria!
 
-lexer.input(data)
-for tok in lexer:
-  print(tok)
-
-result = parser.parse(data)
-#if result == True:
-  #print("Código gerado com sucesso para {nomeArq}"")
-  #export_to_obj(result,nomeArq)
-#print(result)
-
-
-
-
-# def indent_python_code(code):
-#   # Divide as linhas em colunas, cada item é uma linha
-#   lines = code.strip().split('\n')
-#   # Manter a indentação da última linha
-#   indented_code = []
-#   indent_level = 0
-#   # Nível de indentação do último if
-#   #Evitar o problema com o else
-#   last_if_indent_level = 0
-#   # Ajeita a indentação de acordo com a quantidade de \n - Maneira de arruma a identação
-#   previous_line_empty = False
-
-#   for line in lines:
-#       stripped_line = line.strip()
-
-#       # Caso tenha \n\n volta 1 nível
-#       if not stripped_line:
-#           if previous_line_empty:
-#               indent_level -= 1
-#           previous_line_empty = True
-#           continue
-#       else:
-#           previous_line_empty = False
-
-#       # Se a linha atual contém 'return', ajusta a indentação para 1
-#       if 'return' in stripped_line:
-#           # Teremos apenas um retorno por função e ele sempre ficará na indentação correta
-#           indented_code.append('    ' * 1 + stripped_line)
-#           continue
-
-#       # Verifica se a linha atual é 'else:', 'elif:', 'except:', ou 'finally:'
-#       # Esses precisam estar no mesmo nível que o bloco anterior
-#       if stripped_line.split()[0] in ['else:', 'elif:', 'except:', 'finally:']:
-#           indent_level = last_if_indent_level
-
-#       # Adiciona a linha com a indentação correta
-#       indented_code.append('    ' * indent_level + stripped_line)
-
-#       # Verifica se a linha atual termina com ':'
-#       # Toda vez que temos um : precisamos incrementar a indentação
-#       if stripped_line[-1] == ':':
-#           # Se a linha atual é 'if', salva o nível de indentação
-#           if stripped_line.startswith('if'):
-#               last_if_indent_level = indent_level
-#           indent_level += 1
-
-#   # Junta as linhas novamente
-#   return '\n'.join(indented_code)
-
-# result = indent_python_code(result)
-
-
-def add_print(code, armazena):
-  # Dividir o código em linhas
-  lines = code.split('\n')
-
-  # Lista para armazenar as novas linhas de código
-  new_lines = []
-
-  # Percorrer cada linha e verificar se alguma variável é atualizada
-  for line in lines:
-      new_lines.append(line)
-      stripped_line = line.strip()
-      for var in armazena:
-          #Vejo se possuo Z = ...
-          if stripped_line.startswith(var + " ="):
-              # Determinar a indentação da linha
-              #Linha segue a id da ultima
-              indent = line[:len(line) - len(line.lstrip())]
-              # Adicionar a linha de impressão com a indentação correta
-              new_lines.append(f"{indent}print({var})")
-
-  # Juntar as linhas novamente em uma única string
-  new_lines.append("\n\nfunc()")
-  new_code = '\n'.join(new_lines)
-  return new_code
-
-
-#Normalizando a lista de variaveis
-#Separando cada var em um elemento da lista
-#data=data.split(',')
-#Strip - Tira espaços em branco
-
-print(result)
-
-#Seção para exportar o meu código teste
-
-def export_to_obj(code, file_name):
-  with open(file_name, 'w') as file:
-    file.write(code)
-  print("Compilado com sucesso!")
-
-export_to_obj(result, 'Exemplo.py')
+if __name__ == '__main__':
+    main()  

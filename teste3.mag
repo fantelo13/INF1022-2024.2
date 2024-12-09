@@ -1,0 +1,5 @@
+FACA total SER 0.
+REPITA 5 VEZES :
+SOME total COM 2.
+FIM
+MOSTRE total .

@@ -1,0 +1,8 @@
+FACA N SER 10.
+FACA soma SER 0.
+FACA contador SER 1.
+REPITA N VEZES :
+SOME soma COM contador.
+SOME contador COM 1.
+FIM
+MOSTRE soma.

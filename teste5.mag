@@ -1,0 +1,6 @@
+FACA num SER 0.
+SE num ENTAO
+MOSTRE num .
+SENAO
+MOSTRE 10.
+FIM
