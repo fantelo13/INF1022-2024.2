@@ -1,2 +1,3 @@
 # INF1022-2024.2
 Trabalho Final da matéria INF1022 (ANALIS LEXICOS E SINTATICOS)
+Nota:10.O/10.O
